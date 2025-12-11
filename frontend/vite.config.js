@@ -2,13 +2,32 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const normalizeHost = (value) => value?.replace(/^https?:\/\//, '').replace(/\/$/, '') || '';
+const splitHosts = (value) =>
+  value
+    .split(/[,\s]+/)
+    .map((entry) => normalizeHost(entry))
+    .filter(Boolean);
 
-const rawAllowedHost =
-  process.env.VITE_ALLOWED_HOST ||
-  process.env.FRONTEND_URL ||
-  process.env.PUBLIC_HOST ||
-  '';
-const allowedHost = normalizeHost(rawAllowedHost) || 'localhost';
+const allowedHostSources = [
+  process.env.VITE_ALLOWED_HOSTS,
+  process.env.VITE_ALLOWED_HOST,
+  process.env.FRONTEND_URL,
+  process.env.PUBLIC_HOST,
+  process.env.RAILWAY_STATIC_URL,
+  process.env.RAILWAY_PUBLIC_DOMAIN,
+].filter(Boolean);
+
+const allowedHosts = Array.from(
+  new Set(
+    allowedHostSources.flatMap((entry) =>
+      Array.isArray(entry) ? entry.map((val) => normalizeHost(val)) : splitHosts(String(entry)),
+    ),
+  ),
+);
+
+if (allowedHosts.length === 0) {
+  allowedHosts.push('localhost');
+}
 
 const proxyTarget =
   process.env.VITE_DEV_API_URL ||
@@ -22,7 +41,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
-    allowedHosts: allowedHost ? [allowedHost] : [],
+    allowedHosts,
 
     proxy: {
       '/api': {
@@ -35,7 +54,7 @@ export default defineConfig({
   preview: {
     host: true,
     port: 4173,
-    allowedHosts: allowedHost ? [allowedHost] : [],
+    allowedHosts,
   },
 
   build: {
