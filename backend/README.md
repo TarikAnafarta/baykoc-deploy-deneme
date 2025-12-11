@@ -79,14 +79,17 @@ User.objects.filter(email='name@example.com')
 ### Google OAuth Setup
 
 1. Create a **Google OAuth2 Web Client** in the Google Cloud Console with:
-  - Authorized JavaScript origins: `http://localhost:5173`
-  - Authorized redirect URI: `http://localhost:8000/api/users/auth/google/callback`
+  - Authorized JavaScript origins: `http://localhost:5173` (or the value of `FRONTEND_URL`)
+  - Authorized redirect URI: `<BACKEND_BASE_URL>/api/users/auth/google/callback` (defaults to `http://localhost:8000/...` locally)
 2. Copy the credentials into `backend/.env`:
 
 ```
 GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-client-secret
-GOOGLE_REDIRECT_URI=http://localhost:8000/api/users/auth/google/callback
+BACKEND_BASE_URL=http://localhost:8000
+GOOGLE_REDIRECT_PATH=/api/users/auth/google/callback
+# Optional: uncomment to override the derived URI completely
+# GOOGLE_REDIRECT_URI=https://your-backend.example.com/api/users/auth/google/callback
 ```
 
 3. Restart `docker compose up` (or the Django server) after updating the `.env` file.

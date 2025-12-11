@@ -15,6 +15,33 @@ load_dotenv()
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def coalesce_env_setting(setting_key: str, alias_env: str, default_value: str) -> str:
+    """Resolve config values that may reference platform-provided env vars."""
+    direct_value = config(setting_key, default=None)
+    if isinstance(direct_value, str):
+        direct_value = direct_value.strip()
+
+    if direct_value:
+        alias_lookup = os.getenv(direct_value)
+        if alias_lookup:
+            return alias_lookup
+        return direct_value
+
+    alias_value = os.getenv(alias_env)
+    if alias_value:
+        return alias_value
+
+    return default_value
+
+
+def build_absolute_uri(base_url: str, path: str) -> str:
+    base = (base_url or "").rstrip("/") or "http://localhost:8000"
+    normalized_path = path or ""
+    if not normalized_path.startswith("/"):
+        normalized_path = f"/{normalized_path}"
+    return f"{base}{normalized_path}"
+
 ENVIRONMENT = config("DJANGO_ENV", default="development")
 IS_PRODUCTION = ENVIRONMENT == "production"
 
@@ -111,11 +138,11 @@ WSGI_APPLICATION = "backend.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="baykoc"),
-        "USER": config("DB_USER", default="postgres"),
-        "PASSWORD": config("DB_PASSWORD", default=""),
-        "HOST": config("DB_HOST", default="localhost"),
-        "PORT": config("DB_PORT", default="5432"),
+        "NAME": coalesce_env_setting("DB_NAME", "PGDATABASE", "baykoc"),
+        "USER": coalesce_env_setting("DB_USER", "PGUSER", "postgres"),
+        "PASSWORD": coalesce_env_setting("DB_PASSWORD", "PGPASSWORD", ""),
+        "HOST": coalesce_env_setting("DB_HOST", "PGHOST", "localhost"),
+        "PORT": coalesce_env_setting("DB_PORT", "PGPORT", "5432"),
     }
 }
 
@@ -187,6 +214,7 @@ REST_FRAMEWORK = {
 }
 
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
+BACKEND_BASE_URL = config("BACKEND_BASE_URL", default="http://localhost:8000")
 FRONTEND_ORIGINS = config(
     "FRONTEND_ORIGINS",
     default=FRONTEND_URL,
@@ -200,9 +228,12 @@ DEV_FRONTEND_ORIGINS = ["http://127.0.0.1:5173", "http://localhost:5173"]
 # Google OAuth configuration
 GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID", default="")
 GOOGLE_CLIENT_SECRET = config("GOOGLE_CLIENT_SECRET", default="")
+GOOGLE_REDIRECT_PATH = config(
+    "GOOGLE_REDIRECT_PATH", default="/api/users/auth/google/callback"
+)
 GOOGLE_REDIRECT_URI = config(
     "GOOGLE_REDIRECT_URI",
-    default="http://localhost:8000/api/users/auth/google/callback",
+    default=build_absolute_uri(BACKEND_BASE_URL, GOOGLE_REDIRECT_PATH),
 )
 GOOGLE_OAUTH_SCOPES = ["openid", "email", "profile"]
 GOOGLE_OAUTH_STATE_MAX_AGE = config("GOOGLE_OAUTH_STATE_MAX_AGE", default=300, cast=int)

@@ -34,17 +34,15 @@ class GoogleOAuthService:
     def __init__(self):
         self.client_id = getattr(settings, "GOOGLE_CLIENT_ID", "")
         self.client_secret = getattr(settings, "GOOGLE_CLIENT_SECRET", "")
-        self.redirect_uri = getattr(
-            settings,
-            "GOOGLE_REDIRECT_URI",
-            "http://localhost:8000/api/users/auth/google/callback",
-        )
+        self.redirect_uri = getattr(settings, "GOOGLE_REDIRECT_URI", "")
         self.scopes = getattr(
             settings, "GOOGLE_OAUTH_SCOPES", ["openid", "email", "profile"]
         )
         self.state_max_age = getattr(settings, "GOOGLE_OAUTH_STATE_MAX_AGE", 300)
         if not self.client_id or not self.client_secret:
             raise GoogleOAuthError("Google OAuth client configuration is missing.")
+        if not self.redirect_uri:
+            raise GoogleOAuthError("Google redirect URI is not configured.")
 
     def build_authorization_url(self, next_path: str | None = None) -> str:
         """Return the Google consent screen URL with a signed state token."""
