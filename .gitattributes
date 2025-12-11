@@ -1,0 +1,23 @@
+# Normalize text files to LF line endings
+* text=auto eol=lf
+
+# Python
+*.py text eol=lf
+
+# JavaScript / TypeScript / React
+*.js   text eol=lf
+*.jsx  text eol=lf
+*.ts   text eol=lf
+*.tsx  text eol=lf
+
+# Styles / markup
+*.css  text eol=lf
+*.scss text eol=lf
+*.html text eol=lf
+
+# Data / config
+*.json text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.md   text eol=lf
+*.txt  text eol=lf

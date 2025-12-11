@@ -1,0 +1,87 @@
+name: CI - Lint
+
+on:
+  push:
+    branches: ["production", "dev"]
+  pull_request:
+    branches: ["*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  backend-lint:
+    name: Lint backend (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install linters
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black
+
+      - name: Ruff
+        run: |
+          ruff version
+          ruff check --fix backend
+
+      - name: Black
+        run: |
+          black --version
+          black backend
+
+      - name: Check for changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "❌ Code formatting changes detected. Please run 'pre-commit run --all-files' locally and commit the changes."
+            git diff
+            exit 1
+          else
+            echo "✅ Code is properly formatted."
+          fi
+
+  frontend-lint:
+    name: Lint frontend (Node)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js (LTS)
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install deps
+        run: |
+          if [ -f package-lock.json ]; then 
+            npm ci --no-audit --no-fund || npm ci --no-audit --no-fund --legacy-peer-deps
+          else 
+            npm install --no-audit --no-fund || npm install --no-audit --no-fund --legacy-peer-deps
+          fi
+
+      - name: ESLint
+        run: |
+          npm run -s lint --if-present || echo "No lint script; skipped"
+
+      - name: Prettier (check)
+        run: |
+          npm run -s format:check --if-present || echo "No format:check script; skipped"

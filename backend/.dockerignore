@@ -1,0 +1,16 @@
+# Ignore everything not needed for building the backend image
+node_modules
+frontend
+.nginx
+.git
+.gitignore
+.vscode
+.idea
+__pycache__
+*.py[cod]
+*.log
+media
+staticfiles
+backups
+.env
+.env.*

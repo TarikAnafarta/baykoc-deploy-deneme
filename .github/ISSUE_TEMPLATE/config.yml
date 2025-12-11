@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Discussions
+    url: "https://github.com/TarikAnafarta/BayKoc/discussions"
+    about: "Ask questions, share ideas, and get community support."
+  - name: Security Reports
+    url: "https://github.com/TarikAnafarta/BayKoc/security/advisories/new"
+    about: "Report a security vulnerability. Do not open public issues."
+  - name: Bug Report

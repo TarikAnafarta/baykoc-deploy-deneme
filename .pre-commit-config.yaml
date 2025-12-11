@@ -1,0 +1,57 @@
+ci:
+  autofix_prs: false
+  autoupdate_schedule: quarterly
+
+repos:
+  - repo: local
+    hooks:
+      - id: backend-ruff
+        name: Backend - Ruff (lint, auto-fix)
+        language: python
+        entry: ruff check --fix
+        additional_dependencies:
+          - ruff==0.7.3
+        files: ^backend/.*\.py$
+        pass_filenames: true
+        stages: [pre-commit]
+
+      - id: backend-black
+        name: Backend - Black (format)
+        language: python
+        entry: black --fast
+        additional_dependencies:
+          - black==24.10.0
+        files: ^backend/.*\.py$
+        pass_filenames: true
+        stages: [pre-commit]
+
+      - id: backend-isort
+        name: Backend - isort (imports)
+        language: python
+        entry: isort --profile=black
+        additional_dependencies:
+          - isort==5.13.2
+        files: ^backend/.*\.py$
+        pass_filenames: true
+        stages: [pre-commit]
+
+      # Deep backend tests are run in GitHub Actions (tests.yml)
+      # to avoid slow commits and DB dependencies locally.
+
+      - id: frontend-eslint
+        name: Frontend - ESLint (auto-fix)
+        language: system
+        entry: npm --prefix frontend exec -- eslint --fix --config frontend/eslint.config.js
+        files: ^frontend/.*\.(js|jsx)$
+        pass_filenames: true
+        stages: [pre-commit]
+
+      - id: frontend-prettier
+        name: Frontend - Prettier (write)
+        language: system
+        entry: npm --prefix frontend exec -- prettier --write
+        files: ^frontend/.*\.(js|jsx)$
+        pass_filenames: true
+        stages: [pre-commit]
+
+      # Optional quick frontend tests can be run manually with npm test or via CI.

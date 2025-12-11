@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+# Husky pre-commit hook
+# Installation:
+# - Run `npm install` to install deps and trigger `npm run prepare` (husky)
+# - This file is created automatically during setup. If missing, run `npm run prepare`.
+# Behavior:
+# - Runs lint-staged (eslint --fix + prettier --write) on staged JS/JSX files only
+# - Then runs frontend unit tests via npm scripts, or a production build if tests are unavailable
+# - Skips if dependencies are not installed
+
+. "$(dirname "$0")/_/husky.sh"
+
+# Ensure lint-staged is available
+if command -v npx >/dev/null 2>&1; then
+  echo "[husky] Running lint-staged..."
+  npx lint-staged || exit 1
+else
+  echo "[husky] npx not found; skipping lint-staged"
+fi
+
+# Prefer tests; fallback to build if test runner is not available
+if npm run -s test -- --version >/dev/null 2>&1 || npx vitest --version >/dev/null 2>&1; then
+  echo "[husky] Running frontend tests..."
+  npm run -s test || exit 1
+else
+  echo "[husky] Test runner not found; running build instead..."
+  npm run -s build || exit 1
+fi

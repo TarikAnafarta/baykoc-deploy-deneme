@@ -1,0 +1,32 @@
+# BayKoc - Backend (Django + DRF)
+
+Django>=4.2.0
+djangorestframework>=3.14.0
+django-cors-headers>=4.3.0
+django-extensions>=3.2.0
+django-cloudinary-storage>=0.3.0
+django-redis>=5.4.0
+cloudinary
+
+python-dotenv
+python-decouple>=3.8
+
+# Database
+psycopg2-binary>=2.9.0
+
+# Additional dependencies
+python-dateutil>=2.8.0
+requests>=2.31.0
+google-auth>=2.33.0
+
+# Dev tools (linters/formatters)
+ruff
+black
+isort
+pre-commit
+
+# Test runner
+pytest>=8.3.0
+pytest-django>=4.9.0
+
+groq

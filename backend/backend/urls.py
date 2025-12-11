@@ -1,0 +1,26 @@
+# -*- coding: utf-8 -*-
+"""
+Main URL configuration for BayKoc backend.
+"""
+
+from django.conf import settings
+from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import include, path
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/", include("backend.artifacts.urls")),
+    path("api/users/", include("backend.users.urls")),
+]
+
+# Serve static files in development
+if settings.DEBUG:
+    urlpatterns += static(
+        settings.STATIC_URL,
+        document_root=(
+            settings.STATICFILES_DIRS[0]
+            if settings.STATICFILES_DIRS
+            else settings.STATIC_ROOT
+        ),
+    )
