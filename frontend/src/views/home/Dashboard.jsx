@@ -2,6 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { alertErrorClass } from '../../ui/classNames';
 import DefaultAvatar from '../../assets/icons/user_default.svg';
+import {
+  apiUrl,
+  getCsrfToken,
+  parseJsonResponse,
+  extractErrorMessage,
+} from '../../utils/api';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -9,15 +15,6 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
-
-  function getCSRFToken() {
-    const cookies = document.cookie.split(';');
-    for (const c of cookies) {
-      const [n, v] = c.trim().split('=');
-      if (n === 'csrftoken') return v;
-    }
-    return '';
-  }
 
   useEffect(() => {
     function onDocClick(e) {
@@ -37,7 +34,7 @@ export default function Dashboard() {
     async function load() {
       try {
         setError('');
-        const res = await fetch('http://localhost:8000/api/users/me/', {
+        const res = await fetch(apiUrl('/api/users/me/'), {
           headers: { Authorization: `Token ${token}`, 'Content-Type': 'application/json' },
         });
         if (res.status === 401 || res.status === 403) {
@@ -45,12 +42,14 @@ export default function Dashboard() {
           navigate('/login', { replace: true });
           return;
         }
-        if (!res.ok) {
+        const data = await parseJsonResponse(res);
+        if (!res.ok || !data || typeof data !== 'object') {
+          const message = extractErrorMessage(data, 'Kullanıcı bilgileri yüklenemedi');
+          setError(message);
           localStorage.removeItem('authToken');
           navigate('/login', { replace: true });
           return;
         }
-        const data = await res.json();
         if (!data.profile_completed) {
           navigate('/complete-profile', { replace: true });
           return;
@@ -66,12 +65,12 @@ export default function Dashboard() {
   async function logout() {
     const token = localStorage.getItem('authToken');
     try {
-      const res = await fetch('http://localhost:8000/api/users/logout/', {
+      const res = await fetch(apiUrl('/api/users/logout/'), {
         method: 'POST',
         headers: {
           Authorization: `Token ${token}`,
           'Content-Type': 'application/json',
-          'X-CSRFToken': getCSRFToken(),
+          'X-CSRFToken': getCsrfToken(),
         },
       });
       if (res.status === 401 || res.status === 403) {

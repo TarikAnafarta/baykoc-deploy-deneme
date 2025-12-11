@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { apiUrl } from '../utils/api';
+import { apiUrl, parseJsonResponse, extractErrorMessage } from '../utils/api';
 
 const defaultAuthValue = {
   token: '',
@@ -57,10 +57,10 @@ export function AuthProvider({ children }) {
           },
           signal: abortController.signal,
         });
-        if (!response.ok) {
-          throw new Error('Unauthorized');
+        const data = await parseJsonResponse(response);
+        if (!response.ok || !data || typeof data !== 'object') {
+          throw new Error(extractErrorMessage(data, 'Unauthorized'));
         }
-        const data = await response.json();
         setUser(data);
       } catch (error) {
         if (error.name === 'AbortError') return;

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { apiBase } from '../../../hooks/useGraphData';
 import { useOptionalAuth } from '../../../context/AuthContext';
 import baykocDefaultAvatar from '../../../assets/icons/baykoc_default.png';
 import userDefaultAvatar from '../../../assets/icons/user_default.svg';
+import { apiUrl, parseJsonResponse, extractErrorMessage } from '../../../utils/api';
 
 function toScore(value) {
   const num = Number(value);
@@ -67,7 +67,7 @@ export default function GraphChatWidget({ graphContext }) {
     try {
       const payload = { message: text, graph: summarizeGraphContext(graphContext) };
       const token = localStorage.getItem('authToken');
-      const res = await fetch(`${apiBase()}/api/graph/chat/`, {
+      const res = await fetch(apiUrl('/api/graph/chat/'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,13 +76,20 @@ export default function GraphChatWidget({ graphContext }) {
         body: JSON.stringify(payload),
         credentials: 'include',
       });
+      const data = await parseJsonResponse(res);
       if (!res.ok) {
-        const errText = `Sohbet servisine ulaşılamadı (HTTP ${res.status})`;
+        const errText = extractErrorMessage(
+          data,
+          `Sohbet servisine ulaşılamadı (HTTP ${res.status})`,
+        );
         setMessages((prev) => [...prev, { from: 'bot', text: errText }]);
         return;
       }
-      const data = await res.json();
-      setMessages((prev) => [...prev, { from: 'bot', text: data.reply || 'Bir yanıt alınamadı.' }]);
+      const reply = data && typeof data === 'object' ? data.reply : null;
+      setMessages((prev) => [
+        ...prev,
+        { from: 'bot', text: reply || 'Bir yanıt alınamadı.' },
+      ]);
     } catch (error) {
       setMessages((prev) => [
         ...prev,

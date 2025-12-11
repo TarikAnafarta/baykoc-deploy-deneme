@@ -1,8 +1,20 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Railway frontend domainini buraya eklemelisin:
-const allowedHost = 'frontend-production-fda7.up.railway.app';
+const normalizeHost = (value) => value?.replace(/^https?:\/\//, '').replace(/\/$/, '') || '';
+
+const rawAllowedHost =
+  process.env.VITE_ALLOWED_HOST ||
+  process.env.FRONTEND_URL ||
+  process.env.PUBLIC_HOST ||
+  '';
+const allowedHost = normalizeHost(rawAllowedHost) || 'localhost';
+
+const proxyTarget =
+  process.env.VITE_DEV_API_URL ||
+  process.env.VITE_API_URL ||
+  process.env.BACKEND_URL ||
+  'http://localhost:8000';
 
 export default defineConfig({
   plugins: [react()],
@@ -10,11 +22,11 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
-    allowedHosts: [allowedHost],
+    allowedHosts: allowedHost ? [allowedHost] : [],
 
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: proxyTarget,
         changeOrigin: true,
       },
     },
@@ -23,7 +35,7 @@ export default defineConfig({
   preview: {
     host: true,
     port: 4173,
-    allowedHosts: [allowedHost],
+    allowedHosts: allowedHost ? [allowedHost] : [],
   },
 
   build: {

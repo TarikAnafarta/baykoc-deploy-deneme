@@ -9,6 +9,7 @@ import ProfileInfoView from './components/ProfileInfoView';
 import ProfileEditForm from './components/ProfileEditForm';
 import ProfileCropperModal from './components/ProfileCropperModal';
 import ThemeToggle from '../../ui/ThemeToggle';
+import { apiUrl, parseJsonResponse, extractErrorMessage } from '../../utils/api';
 
 const TRACK_LABELS = {
   lgs: 'LGS',
@@ -177,9 +178,6 @@ export default function ProfilePage() {
     },
   ];
 
-  function apiBase() {
-    return 'http://localhost:8000';
-  }
   function showAlert(message, type = 'success') {
     setAlertState({ message, type, show: true });
     setTimeout(() => setAlertState((a) => ({ ...a, show: false })), 5000);
@@ -189,7 +187,7 @@ export default function ProfilePage() {
   const fetchUser = useCallback(
     async (currentToken) => {
       try {
-        const res = await fetch(`${apiBase()}/api/users/me/`, {
+        const res = await fetch(apiUrl('/api/users/me/'), {
           headers: { Authorization: `Token ${currentToken}`, 'Content-Type': 'application/json' },
         });
         if (!res.ok) {
@@ -198,10 +196,14 @@ export default function ProfilePage() {
           navigate('/login', { replace: true });
           return null;
         }
-        const u = await res.json();
-        setUser(u);
-        setAuthData(currentToken, u);
-        return u;
+        const payload = await parseJsonResponse(res);
+        if (!payload || typeof payload !== 'object') {
+          showAlert('Kullanıcı bilgileri alınamadı. Lütfen tekrar deneyin.', 'error');
+          return null;
+        }
+        setUser(payload);
+        setAuthData(currentToken, payload);
+        return payload;
       } catch (err) {
         showAlert(
           'Kullanıcı bilgileri yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.',
@@ -297,7 +299,7 @@ export default function ProfilePage() {
         track,
         language: track === 'dil' ? editLanguage : null,
       };
-      const res = await fetch(`${apiBase()}/api/users/me/`, {
+      const res = await fetch(apiUrl('/api/users/me/'), {
         method: 'PUT',
         headers: { Authorization: `Token ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -307,18 +309,19 @@ export default function ProfilePage() {
         navigate('/login', { replace: true });
         return;
       }
-      if (!res.ok) {
-        const err = await res.json();
-        let msg =
-          err.message ||
-          err.track?.[0] ||
-          err.grade?.[0] ||
-          err.language?.[0] ||
-          'Profil güncellenirken bir hata oluştu';
-        showAlert(msg, 'error');
+      const responseBody = await parseJsonResponse(res);
+      if (!res.ok || !responseBody || typeof responseBody !== 'object') {
+        const errorSource =
+          (typeof responseBody === 'object' && responseBody !== null &&
+            (responseBody.message ||
+              responseBody.track?.[0] ||
+              responseBody.grade?.[0] ||
+              responseBody.language?.[0])) ||
+          extractErrorMessage(responseBody, 'Profil güncellenirken bir hata oluştu');
+        showAlert(errorSource, 'error');
         return;
       }
-      const updated = await res.json();
+      const updated = responseBody;
       setUser(updated);
       setAuthData(token, updated);
       setEdit(false);
@@ -531,7 +534,7 @@ export default function ProfilePage() {
 
     try {
       showAlert('Profil resmi yükleniyor...', 'success');
-      const res = await fetch(`${apiBase()}/api/users/me/`, {
+      const res = await fetch(apiUrl('/api/users/me/'), {
         method: 'PATCH',
         headers: { Authorization: `Token ${token}` },
         body: form,
@@ -541,12 +544,16 @@ export default function ProfilePage() {
         navigate('/login', { replace: true });
         return;
       }
-      if (!res.ok) {
-        const err = await res.json();
-        showAlert(err.message || 'Profil resmi yüklenirken bir hata oluştu', 'error');
+      const responseBody = await parseJsonResponse(res);
+      if (!res.ok || !responseBody || typeof responseBody !== 'object') {
+        const message = extractErrorMessage(
+          responseBody,
+          'Profil resmi yüklenirken bir hata oluştu',
+        );
+        showAlert(message, 'error');
         return;
       }
-      const updated = await res.json();
+      const updated = responseBody;
       setUser(updated);
       setAuthData(token, updated);
       setModalOpen(false);

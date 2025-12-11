@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-
-export function apiBase() {
-  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-}
+import { apiUrl, parseJsonResponse, extractErrorMessage } from '../utils/api';
 
 export async function authFetch(path, options = {}) {
   const token = localStorage.getItem('authToken');
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData
+      ? { Accept: 'application/json' }
+      : { 'Content-Type': 'application/json', Accept: 'application/json' }),
     ...(options.headers || {}),
   };
   if (token) headers.Authorization = `Token ${token}`;
-  const res = await fetch(`${apiBase()}${path}`, { ...options, headers });
+  const res = await fetch(apiUrl(path), { ...options, headers });
   if (res.status === 401 || res.status === 403) {
     localStorage.removeItem('authToken');
     window.location.replace('/login');
@@ -60,7 +60,7 @@ export default function useGraphData() {
       try {
         const res = await authFetch('/api/graph/sources/', { signal: controller.signal });
         if (!res.ok) throw new Error('Ders listesi yüklenemedi');
-        const data = await res.json();
+        const data = await parseJsonResponse(res);
         if (controller.signal.aborted) return;
         const subjectKeys = Object.keys(data || {});
         setSubjects(subjectKeys);
@@ -98,7 +98,7 @@ export default function useGraphData() {
           signal: controller.signal,
         });
         if (!baseRes.ok) throw new Error('Ders seçenekleri yüklenemedi');
-        const baseData = await baseRes.json();
+        const baseData = await parseJsonResponse(baseRes);
         if (controller.signal.aborted) return;
         setKonuOptions(Array.isArray(baseData.konular) ? baseData.konular : []);
 
@@ -112,7 +112,7 @@ export default function useGraphData() {
             signal: controller.signal,
           });
           if (!konuRes.ok) throw new Error('Konu seçenekleri yüklenemedi');
-          const konuData = await konuRes.json();
+          const konuData = await parseJsonResponse(konuRes);
           if (controller.signal.aborted) return;
           setGrupOptions(Array.isArray(konuData.gruplar) ? konuData.gruplar : []);
         } else {
@@ -129,7 +129,7 @@ export default function useGraphData() {
             signal: controller.signal,
           });
           if (!grupRes.ok) throw new Error('Alt grup seçenekleri yüklenemedi');
-          const grupData = await grupRes.json();
+          const grupData = await parseJsonResponse(grupRes);
           if (controller.signal.aborted) return;
           setAltGrupOptions(Array.isArray(grupData.alt_gruplar) ? grupData.alt_gruplar : []);
         } else {
@@ -202,10 +202,9 @@ export default function useGraphData() {
         const res = await authFetch(`/api/graph/data/?${params.toString()}`, {
           signal: controller.signal,
         });
-        const payload = await res.json();
+        const payload = await parseJsonResponse(res);
         if (!res.ok) {
-          const serverMessage =
-            payload?.detail || payload?.message || payload?.error || 'Grafik verisi yüklenemedi';
+          const serverMessage = extractErrorMessage(payload, 'Grafik verisi yüklenemedi');
           throw new Error(serverMessage);
         }
         if (controller.signal.aborted) return;

@@ -187,6 +187,15 @@ REST_FRAMEWORK = {
 }
 
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
+FRONTEND_ORIGINS = config(
+    "FRONTEND_ORIGINS",
+    default=FRONTEND_URL,
+    cast=Csv(),
+)
+FRONTEND_ORIGINS = [origin for origin in FRONTEND_ORIGINS if origin]
+if not FRONTEND_ORIGINS and FRONTEND_URL:
+    FRONTEND_ORIGINS = [FRONTEND_URL]
+DEV_FRONTEND_ORIGINS = ["http://127.0.0.1:5173", "http://localhost:5173"]
 
 # Google OAuth configuration
 GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID", default="")
@@ -201,18 +210,17 @@ GOOGLE_OAUTH_STATE_MAX_AGE = config("GOOGLE_OAUTH_STATE_MAX_AGE", default=300, c
 # CORS settings (dev: allow Vite; prod: restrict origins)
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
-    CORS_ALLOWED_ORIGINS = [
-        FRONTEND_URL,
-        "http://127.0.0.1:5173",
-    ]
+    CORS_ALLOWED_ORIGINS = list(
+        dict.fromkeys(FRONTEND_ORIGINS + DEV_FRONTEND_ORIGINS)
+    )
 else:
     CORS_ALLOW_ALL_ORIGINS = False
-    CORS_ALLOWED_ORIGINS = [FRONTEND_URL]
+    CORS_ALLOWED_ORIGINS = FRONTEND_ORIGINS
 
 CORS_ALLOW_CREDENTIALS = True
 
 # CSRF settings to trust the frontend origin (only needed if using SessionAuth/CSRF)
-CSRF_TRUSTED_ORIGINS = [FRONTEND_URL, "http://127.0.0.1:5173"]
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(FRONTEND_ORIGINS + DEV_FRONTEND_ORIGINS))
 
 CSRF_COOKIE_HTTPONLY = True
 CSRF_USE_SESSIONS = False

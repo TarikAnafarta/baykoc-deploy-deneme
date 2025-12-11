@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { apiUrl, getCsrfToken } from '../../utils/api';
+import {
+  apiUrl,
+  getCsrfToken,
+  parseJsonResponse,
+  extractErrorMessage,
+} from '../../utils/api';
 import { sanitizeNextPath } from '../../utils/navigation';
 import googleIcon from '../../assets/icons/google.svg';
 import {
@@ -51,16 +56,20 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok) {
-        if (res.status === 403 && data.message === 'Account is inactive.') {
+        const message = extractErrorMessage(data, 'Giriş başarısız');
+        if (res.status === 403 && message === 'Account is inactive.') {
           setShowVerifyPrompt(true);
         } else {
-          throw new Error(data.detail || data.message || 'Giriş başarısız');
+          throw new Error(message);
         }
         return;
       }
-      const nextToken = data.token;
+      const nextToken = data && typeof data === 'object' ? data.token : null;
+      if (!nextToken) {
+        throw new Error('Sunucudan geçerli bir oturum anahtarı alınamadı.');
+      }
       let profile = null;
 
       try {
@@ -73,7 +82,10 @@ export default function LoginPage() {
           return;
         }
         if (meRes.ok) {
-          profile = await meRes.json();
+          const mePayload = await parseJsonResponse(meRes);
+          if (mePayload && typeof mePayload === 'object') {
+            profile = mePayload;
+          }
         }
       } catch (_) {
         /* ignore; AuthContext will retry if needed */
@@ -106,11 +118,14 @@ export default function LoginPage() {
         endpoint.searchParams.set('next', nextPath);
       }
       const res = await fetch(endpoint.toString());
-      const data = await res.json();
-      if (!res.ok || !data.authorization_url) {
-        throw new Error(data.message || 'Google ile giriş başlatılamadı.');
+      const data = await parseJsonResponse(res);
+      const authorizationUrl = data && typeof data === 'object' ? data.authorization_url : '';
+      if (!res.ok || !authorizationUrl) {
+        throw new Error(
+          extractErrorMessage(data, 'Google ile giriş başlatılamadı.'),
+        );
       }
-      window.location.href = data.authorization_url;
+      window.location.href = authorizationUrl;
     } catch (err) {
       setError(err.message);
       setLoading(false);
@@ -130,9 +145,11 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify({ email: currentEmail }),
       });
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok) {
-        throw new Error(data.message || 'Doğrulama kodu gönderilemedi.');
+        throw new Error(
+          extractErrorMessage(data, 'Doğrulama kodu gönderilemedi.'),
+        );
       }
       setSuccess('Doğrulama kodu gönderildi! Doğrulama sayfasına yönlendiriliyorsunuz...');
       setTimeout(() => navigate(`/verify?email=${encodeURIComponent(currentEmail)}`), 1200);

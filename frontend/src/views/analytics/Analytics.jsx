@@ -1,20 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as d3 from 'd3';
 import { useTheme } from '../../context/ThemeContext';
-
-function apiBase() {
-  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-}
+import { apiUrl, parseJsonResponse, extractErrorMessage } from '../../utils/api';
 
 async function authFetch(path, options = {}) {
   const token = localStorage.getItem('authToken');
   const headers = {
     'Content-Type': 'application/json',
+    Accept: 'application/json',
     ...(options.headers || {}),
   };
   if (token) headers.Authorization = `Token ${token}`;
 
-  const res = await fetch(`${apiBase()}${path}`, { ...options, headers });
+  const res = await fetch(apiUrl(path), { ...options, headers });
 
   if (res.status === 401 || res.status === 403) {
     localStorage.removeItem('authToken');
@@ -59,10 +57,12 @@ function Analytics() {
       setError('');
       try {
         const res = await authFetch('/api/graph/sources/');
+        const data = await parseJsonResponse(res);
         if (!res.ok) {
-          throw new Error(`Kaynaklar yüklenemedi (HTTP ${res.status})`);
+          throw new Error(
+            extractErrorMessage(data, `Kaynaklar yüklenemedi (HTTP ${res.status})`),
+          );
         }
-        const data = await res.json();
         // GraphSourcesAPIView doğrudan { subject_key: [konu_slug, ...] } döndürüyor.
         // Örn: { "matematik": ["konu_sayilar_ve_cebir", ...], "turkce": [...] }
         const subjectKeys = Object.keys(data || {});
@@ -104,10 +104,12 @@ function Analytics() {
 
         // Örnek endpoint: /api/analytics/progress/?subject=...&konu=...
         const res = await authFetch(`/api/analytics/progress/?${params.toString()}`);
+        const data = await parseJsonResponse(res);
         if (!res.ok) {
-          throw new Error(`Analitik veriler alınamadı (HTTP ${res.status})`);
+          throw new Error(
+            extractErrorMessage(data, `Analitik veriler alınamadı (HTTP ${res.status})`),
+          );
         }
-        const data = await res.json();
         // Beklenen basit yapı örneği:
         // {
         //   timeline: [ { date: "2025-11-01", average_success: 42.5 }, ... ],
